@@ -1,0 +1,97 @@
+You can build a **Streamlit dashboard** that visualizes vulnerabilities across the year with **new, fixed, and pending counts per month**.  
+
+---
+
+### **Steps to Build the Streamlit App**
+1. **Upload Excel files** (one for each month)  
+2. **Process data** by comparing each month's vulnerabilities  
+3. **Generate a summary table** with new, fixed, and pending vulnerabilities for each month  
+4. **Visualize data** using Streamlit charts  
+
+---
+
+### **Install Dependencies**  
+Run this in your terminal:  
+```bash
+pip install streamlit pandas openpyxl matplotlib
+```
+
+---
+
+### **Python Code for Streamlit App**
+```python
+import streamlit as st
+import pandas as pd
+import os
+import matplotlib.pyplot as plt
+
+st.title("Vulnerability Tracker Dashboard")
+
+# File upload section
+st.sidebar.header("Upload Monthly Reports")
+uploaded_files = st.sidebar.file_uploader(
+    "Upload Excel reports (one per month)", accept_multiple_files=True, type=['xlsx'])
+
+if uploaded_files:
+    st.sidebar.success(f"{len(uploaded_files)} files uploaded successfully.")
+
+    # Dictionary to store month-wise vulnerability data
+    monthly_data = {}
+
+    # Read and process each file
+    for file in uploaded_files:
+        month_name = file.name.split('.')[0]  # Extract month name from filename
+        df = pd.read_excel(file)
+
+        # Create a unique identifier from all columns
+        unique_columns = list(df.columns)
+        df["Unique_ID"] = df[unique_columns].astype(str).agg('|'.join, axis=1)
+
+        # Store processed data
+        monthly_data[month_name] = set(df["Unique_ID"])
+
+    # Generate year-wise summary
+    report_data = []
+    previous_month_set = set()
+
+    for month, current_month_set in sorted(monthly_data.items()):
+        new_vulns = len(current_month_set - previous_month_set)
+        fixed_vulns = len(previous_month_set - current_month_set)
+        pending_vulns = len(current_month_set & previous_month_set)
+
+        report_data.append([month, new_vulns, fixed_vulns, pending_vulns])
+        previous_month_set = current_month_set  # Move to next month
+
+    # Create summary DataFrame
+    report_df = pd.DataFrame(report_data, columns=["Month", "New", "Fixed", "Pending"])
+    st.write("### Vulnerability Summary for the Year")
+    st.dataframe(report_df)
+
+    # Visualization
+    fig, ax = plt.subplots(figsize=(10, 5))
+    report_df.set_index("Month").plot(kind="bar", ax=ax)
+    plt.xticks(rotation=45)
+    plt.title("Vulnerability Trends")
+    plt.ylabel("Count")
+    st.pyplot(fig)
+```
+
+---
+
+### **Features:**
+✔ **Uploads multiple Excel reports** for different months  
+✔ **Automatically processes** new, fixed, and pending vulnerabilities  
+✔ **Displays a table summary** for the year  
+✔ **Generates a bar chart** to visualize trends  
+
+---
+
+### **How to Run the App**
+1. **Save the script** as `app.py`  
+2. **Run it** with:  
+   ```bash
+   streamlit run app.py
+   ```
+3. **Upload your Excel files** (each representing a month)  
+
+Would you like additional features like filtering by severity or exporting the yearly summary?
